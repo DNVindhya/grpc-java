@@ -1,4 +1,5 @@
 plugins {
+    id "application"
     id "java-library"
     id "maven-publish"
 
@@ -9,10 +10,16 @@ plugins {
 description = "gRPC: Observability"
 dependencies {
     api project(':grpc-api')
+    def cloudLoggingVersion = '3.6.1'
 
     implementation libraries.guava,
             project(':grpc-protobuf'),
             project(':grpc-stub')
+
+    implementation ("com.google.cloud:google-cloud-logging:${cloudLoggingVersion}") {
+        exclude group: 'com.google.guava', module: 'guava'
+        exclude group: 'com.google.api.grpc', module: 'proto-google-common-protos'
+    }
 
     testImplementation project(':grpc-testing'),
             project(':grpc-testing-proto'),
@@ -26,3 +33,24 @@ dependencies {
 
 configureProtoCompilation()
 
+startScripts.enabled = false
+
+task clientLogger(type: CreateStartScripts) {
+    mainClass = 'io.grpc.observability.logging.ClientLogger'
+    applicationName = 'client-logger'
+    outputDir = new File(project.buildDir, 'tmp/scripts/' + name)
+    classpath = startScripts.classpath
+}
+
+task cloudSample(type: CreateStartScripts) {
+    mainClass = 'io.grpc.observability.logging.CloudLoggingSample'
+    applicationName = 'cloud-sample'
+    outputDir = new File(project.buildDir, 'tmp/scripts/' + name)
+    classpath = startScripts.classpath
+}
+
+applicationDistribution.into('bin') {
+    from(clientLogger)
+    from(cloudSample)
+    fileMode = 0755
+}
