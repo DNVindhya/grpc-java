@@ -30,11 +30,11 @@ public class ClientLogger {
     String logName = "mt-test-log";
 
     // Registering custom logging handler
-    logger.addHandler(new CloudLoggingHandler(Level.ALL, logName, projectId));
+    logger.addHandler(new CloudLoggingHandler(null, logName, projectId));
 
     GrpcLogRecord logProto =
         GrpcLogRecord.newBuilder()
-            .setRpcId(1001)
+            .setRpcId(1001890)
             .setServiceName("foo")
             .setMethodName("bar")
             .build();

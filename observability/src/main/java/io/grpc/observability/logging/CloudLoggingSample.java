@@ -54,7 +54,7 @@ public class CloudLoggingSample {
       System.out.println("Completed logging.write()");
 /*      Page<LogEntry> logEntries = logging.listLogEntries();*/
     } catch (Exception ex) {
-      ex.getCause().printStackTrace();
+      throw ex;
     }
     System.out.printf("Logged: %s%n", textPayload);
   }

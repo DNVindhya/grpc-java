@@ -16,7 +16,6 @@
 
 package io.grpc.observability.logging;
 
-/*import com.google.api.gax.paging.Page;*/
 import com.google.cloud.MonitoredResource;
 import com.google.cloud.logging.LogEntry;
 import com.google.cloud.logging.Logging;
@@ -31,10 +30,7 @@ import io.grpc.internal.JsonParser;
 import io.grpc.observabilitylog.v1.GrpcLogRecord;
 import java.io.IOException;
 import java.util.Collections;
-/*import java.util.HashMap;*/
 import java.util.Map;
-import java.util.logging.ErrorManager;
-/*import java.util.logging.Filter;*/
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -45,127 +41,136 @@ import java.util.logging.LogRecord;
  */
 @Internal
 public class CloudLoggingHandler extends Handler {
-  private LoggingOptions loggingOptions;
-  private Logging logging;
-  private Level baseLevel;
-  private String logName;
 
-  /** Initialize CloudLoggingHandler. */
-  public CloudLoggingHandler(Level defaultLevel, String log, String projectId) {
-    baseLevel = defaultLevel.equals(Level.ALL) ? Level.FINEST : defaultLevel;
+  private static final String DEFAULT_LOG_NAME = "grpc-observability";
+  private static final Level DEFAULT_LOG_LEVEL = Level.ALL;
+
+  private final LoggingOptions loggingOptions;
+  private final Logging loggingClient;
+  private final Level baseLevel;
+  private final String cloudLogName;
+
+  /**
+   * Creates a custom logging handler that publishes message to Cloud logging.
+   * Default log level is set to Level.FINEST if level is not passed.
+   */
+  public CloudLoggingHandler() {
+    this(null, null, null);
+  }
+
+  /**
+   * Creates a custom logging handler that publishes message to Cloud logging.
+   *
+   * @param level set the level for which message levels will be logged by the custom logger
+   */
+  public CloudLoggingHandler(Level level) {
+    this(level, null, null);
+  }
+
+  /**
+   * Creates a custom logging handler that publishes message to Cloud logging.
+   *
+   * @param level set the level for which message levels will be logged by the custom logger
+   * @param logName the name of the log to which log entries are written
+   */
+  public CloudLoggingHandler(Level level, String logName) {
+    this(level, logName, null);
+  }
+
+  /**
+   * Creates a custom logging handler that publishes message to Cloud logging.
+   *
+   * @param level set the level for which message levels will be logged by the custom logger
+   * @param logName the name of the log to which log entries are written
+   * @param destinationProjectId the value of cloud project id to which logs are sent to by the
+   *     custom logger
+   */
+  public CloudLoggingHandler(Level level, String logName, String destinationProjectId) {
+    baseLevel =
+        (level != null) ? (level.equals(DEFAULT_LOG_LEVEL) ? Level.FINEST : level) : Level.FINEST;
     setLevel(baseLevel);
-    String default_log_name = "o11y-test-log";
-    logName = log != null ? log : default_log_name;
+    cloudLogName = logName != null ? logName : DEFAULT_LOG_NAME;
 
-    try {
-      // String overrideProjectId = config.getProjectId();
-      String overrideProjectId = projectId != null ? projectId : null;
-
-      if (!Strings.isNullOrEmpty(overrideProjectId)) {
-        loggingOptions = LoggingOptions.newBuilder().setProjectId(overrideProjectId).build();
-      } else {
-        loggingOptions = LoggingOptions.getDefaultInstance();
-      }
-
-      logging = loggingOptions.getService();
-      // logging.setFlushSeverity(Severity.DEBUG);
-    } catch (Exception ex) {
-      reportError("Error in initializing Cloud Logging ", ex, ErrorManager.OPEN_FAILURE);
-      throw ex;
+    // TODO(dnvindhya) read the value from config instead of taking it as an argument
+    if (Strings.isNullOrEmpty(destinationProjectId)) {
+      loggingOptions = LoggingOptions.getDefaultInstance();
+    } else {
+      loggingOptions = LoggingOptions.newBuilder().setProjectId(destinationProjectId).build();
     }
+    loggingClient = loggingOptions.getService();
   }
 
   @Override
   public void publish(LogRecord record) {
-    System.out.println("Entry to publish");
     if (!(record instanceof LogRecordExtension)) {
-      throw new AssertionError("Incorrect log record");
+      throw new IllegalArgumentException("Expected record of type LogRecordExtension");
     }
-
-    GrpcLogRecord logRecord = ((LogRecordExtension) record).getGrpcLogRecord();
     Level logLevel = record.getLevel();
-    writeLog(logRecord, logLevel);
+    GrpcLogRecord protoRecord = ((LogRecordExtension) record).getGrpcLogRecord();
+    writeLog(protoRecord, logLevel);
   }
 
   private void writeLog(GrpcLogRecord logProto, Level logLevel) {
+    if (loggingClient == null) {
+      throw new IllegalStateException("Logging client not initialized");
+    }
     try {
-      System.out.println("Entery to writeLog");
-      Severity cloudLogLevel = getCloudloggingLevel(logLevel);
-      Map<String, Object> payload = protoToMapConverter(logProto);
+      Severity cloudLogLevel = getCloudLoggingLevel(logLevel);
+      Map<String, Object> mapPayload = protoToMapConverter(logProto);
 
       LogEntry grpcLogEntry =
-          LogEntry.newBuilder(JsonPayload.of(payload))
+          LogEntry.newBuilder(JsonPayload.of(mapPayload))
               .setSeverity(cloudLogLevel)
-              .setLogName(logName)
+              .setLogName(cloudLogName)
               .setResource(MonitoredResource.newBuilder("global").build())
               .build();
-
-      System.out.println("GrpcLogEntry is formed");
-      logging.write(Collections.singleton(grpcLogEntry));
-      System.out.println("Completed writing log entry using logging.write()");
-    } catch (Exception ex) {
-      ex.getCause().printStackTrace();
-      // reportError(null, ex, ErrorManager.WRITE_FAILURE);
-      return;
+      loggingClient.write(Collections.singleton(grpcLogEntry));
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
-  /* Google Cloud Logging API only accepts String payload or Json Payload
-  Adding all the grpc o11y logging values as string makes it difficult to look up or index
-  Hence we are going with the Json Payload approach
-   */
   @SuppressWarnings("unchecked")
   private Map<String, Object> protoToMapConverter(GrpcLogRecord logProto)
       throws InvalidProtocolBufferException, IOException {
     JsonFormat.Printer printer = JsonFormat.printer().preservingProtoFieldNames();
     String recordJson = printer.print(logProto);
 
-    Map<String, Object> recordMap = (Map<String, Object>) JsonParser.parse(recordJson);
-    return recordMap;
+    return (Map<String, Object>) JsonParser.parse(recordJson);
   }
 
   @Override
   public void flush() {
-    System.out.println("Entry to flush");
-    logging.flush();
+    if (loggingClient == null) {
+      throw new IllegalStateException("Logging client not initialized");
+    }
+    loggingClient.flush();
   }
 
   @Override
   public synchronized void close() throws SecurityException {
-    if (logging != null) {
-      try {
-        System.out.println("Trying to close logging");
-        logging.close();
-      } catch (Exception ex) {
-        System.out.println("Exception while closing");
-        ex.getCause().printStackTrace();
-        // reportError(null, ex, ErrorManager.CLOSE_FAILURE);
-      }
+    if (loggingClient == null) {
+      throw new IllegalStateException("Logging client not initialized");
+    }
+    try {
+      loggingClient.close();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
-  private Severity getCloudloggingLevel(Level recordLevel) {
+  private Severity getCloudLoggingLevel(Level recordLevel) {
     switch (recordLevel.intValue()) {
-      // FINEST
-      case 300:
+      case 300: // FINEST
+      case 400: // FINER
+      case 500: // FINE
         return Severity.DEBUG;
-        // FINER
-      case 400:
-        return Severity.DEBUG;
-        // FINE
-      case 500:
-        return Severity.DEBUG;
-        // CONFIG
-      case 700:
+      case 700: // CONFIG
+      case 800: // INFO
         return Severity.INFO;
-        // INFO
-      case 800:
-        return Severity.INFO;
-        // WARNING
-      case 900:
+      case 900: // WARNING
         return Severity.WARNING;
-        // SEVERE
-      case 1000:
+      case 1000: // SEVERE
         return Severity.ERROR;
       default:
         return Severity.DEFAULT;
