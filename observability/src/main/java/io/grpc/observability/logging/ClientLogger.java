@@ -30,7 +30,8 @@ public class ClientLogger {
     String logName = "mt-test-log";
 
     // Registering custom logging handler
-    logger.addHandler(new CloudLoggingHandler(null, logName, projectId));
+    CloudLoggingHandler customHandler = new CloudLoggingHandler(null, logName, projectId);
+    logger.addHandler(customHandler);
 
     GrpcLogRecord logProto =
         GrpcLogRecord.newBuilder()
@@ -49,5 +50,12 @@ public class ClientLogger {
     logger.log(record);
 
     System.out.println("Successfully logged");
+
+    try {
+      customHandler.close();
+    } catch(Exception ex) {
+      System.out.println("Exception while closing custom logging handler");
+      ex.getCause().printStackTrace();
+    }
   }
 }
