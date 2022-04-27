@@ -25,16 +25,27 @@ targetCompatibility = 1.8
 def grpcVersion = '1.47.0-SNAPSHOT' // CURRENT_GRPC_VERSION
 def protobufVersion = '3.19.2'
 def protocVersion = protobufVersion
+def protocGenVersion = '1.46.0'
+def opencensusVersion = "0.31.0"
 
 dependencies {
+    implementation platform("io.grpc:grpc-bom:${grpcVersion}")
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     compileOnly "org.apache.tomcat:annotations-api:6.0.53"
+    implementation "com.google.http-client:google-http-client-jackson2:1.41.7"
+
+    implementation "io.grpc:grpc-census:${grpcVersion}",
+            "io.opencensus:opencensus-api:${opencensusVersion}",
+            "io.opencensus:opencensus-contrib-grpc-metrics:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}",
+            "io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}"
 
     // examples/advanced need this for JsonFormat
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
 
-    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}",
+            "io.opencensus:opencensus-impl:${opencensusVersion}"
 
     testImplementation "io.grpc:grpc-testing:${grpcVersion}"
     testImplementation "junit:junit:4.12"
@@ -44,7 +55,7 @@ dependencies {
 protobuf {
     protoc { artifact = "com.google.protobuf:protoc:${protocVersion}" }
     plugins {
-        grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" }
+        grpc { artifact = "io.grpc:protoc-gen-grpc-java:${protocGenVersion}" }
     }
     generateProtoTasks {
         all()*.plugins { grpc {} }

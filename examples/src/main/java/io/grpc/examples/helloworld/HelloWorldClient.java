@@ -20,6 +20,14 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.opencensus.contrib.grpc.metrics.RpcViews;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -76,6 +84,24 @@ public class HelloWorldClient {
     }
     if (args.length > 1) {
       target = args[1];
+    }
+
+    // Configure export to Monitoring and Trace
+    String gcpClientProject = "grpc-testing";
+    try {
+      RpcViews.registerAllGrpcViews();
+      // TraceConfig traceConfig = Tracing.getTraceConfig();
+      // traceConfig.updateActiveTraceParams(
+      //     traceConfig.getActiveTraceParams().toBuilder()
+      //         .setSampler(Samplers.alwaysSample())
+      //         .build());
+
+      StackdriverStatsExporter.createAndRegister(
+          StackdriverStatsConfiguration.builder().setProjectId(gcpClientProject).build());
+      // StackdriverTraceExporter.createAndRegister(
+      //     StackdriverTraceConfiguration.builder().setProjectId(gcpClientProject).build());
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
     // Create a communication channel to the server, known as a Channel. Channels are thread-safe
