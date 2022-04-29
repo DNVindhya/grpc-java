@@ -41,7 +41,8 @@ import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.propagation.BinaryFormat;
-import io.opencensus.trace.unsafe.ContextUtils;
+// import io.opencensus.trace.unsafe.ContextUtils;
+import io.opencensus.trace.unsafe.ContextHandleUtils;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -371,7 +372,8 @@ final class CensusTracingModule {
       // Access directly the unsafe trace API to create the new Context. This is a safe usage
       // because gRPC always creates a new Context for each of the server calls and does not
       // inherit from the parent Context.
-      return ContextUtils.withValue(context, span);
+      // return ContextUtils.withValue(context, span);
+      return ContextHandleUtils.withValue(context, span);
     }
 
     @Override
@@ -411,8 +413,10 @@ final class CensusTracingModule {
       // Safe usage of the unsafe trace API because CONTEXT_SPAN_KEY.get() returns the same value
       // as Tracer.getCurrentSpan() except when no value available when the return value is null
       // for the direct access and BlankSpan when Tracer API is used.
+      // final CallAttemptsTracerFactory tracerFactory =
+      //     newClientCallTracer(ContextHandleUtils.getValue(Context.current()), method);
       final CallAttemptsTracerFactory tracerFactory =
-          newClientCallTracer(ContextUtils.getValue(Context.current()), method);
+          newClientCallTracer(ContextHandleUtils.getValue(ContextHandleUtils.currentContext()), method);
       ClientCall<ReqT, RespT> call =
           next.newCall(
               method,

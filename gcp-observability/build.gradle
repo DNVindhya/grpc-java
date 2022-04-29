@@ -51,10 +51,8 @@ dependencies {
 
     testImplementation project(':grpc-testing'),
             project(':grpc-testing-proto'),
-            project(':grpc-netty-shaded'),
-            libraries.opencensus_contrib_grpc_metrics,
-            ("io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}"),
-            ("io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}")
+            project(':grpc-netty-shaded')
+
     testImplementation (libraries.guava_testlib) {
         exclude group: 'junit', module: 'junit'
     }
