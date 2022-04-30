@@ -95,7 +95,6 @@ import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Tracer;
 import io.opencensus.trace.propagation.BinaryFormat;
 import io.opencensus.trace.propagation.SpanContextParseException;
-import io.opencensus.trace.unsafe.ContextUtils;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
@@ -121,6 +120,7 @@ import org.mockito.junit.MockitoRule;
  * Test for {@link CensusStatsModule} and {@link CensusTracingModule}.
  */
 @RunWith(JUnit4.class)
+@SuppressWarnings("deprecation")
 public class CensusModulesTest {
   private static final CallOptions.Key<String> CUSTOM_OPTION =
       CallOptions.Key.createWithDefault("option1", "default");
@@ -247,6 +247,7 @@ public class CensusModulesTest {
   // Test that Census ClientInterceptors uses the TagContext and Span out of the current Context
   // to create the ClientCallTracer, and that it intercepts ClientCall.Listener.onClose() to call
   // ClientCallTracer.callEnded().
+  @SuppressWarnings("deprecation")
   private void testClientInterceptors(boolean nonDefaultContext) {
     grpcServerRule.getServiceRegistry().addService(
         ServerServiceDefinition.builder("package1.service2").addMethod(
@@ -284,7 +285,7 @@ public class CensusModulesTest {
                   .emptyBuilder()
                   .putLocal(StatsTestUtils.EXTRA_TAG, TagValue.create("extra value"))
                   .build());
-      ctx = ContextUtils.withValue(ctx, fakeClientParentSpan);
+      ctx = io.opencensus.trace.unsafe.ContextUtils.withValue(ctx, fakeClientParentSpan);
       Context origCtx = ctx.attach();
       try {
         call = interceptedChannel.newCall(method, CALL_OPTIONS);
@@ -295,7 +296,8 @@ public class CensusModulesTest {
       assertEquals(
           io.opencensus.tags.unsafe.ContextUtils.getValue(Context.ROOT),
           io.opencensus.tags.unsafe.ContextUtils.getValue(Context.current()));
-      assertEquals(ContextUtils.getValue(Context.current()), BlankSpan.INSTANCE);
+      assertEquals(io.opencensus.trace.unsafe.ContextUtils.getValue(Context.current()),
+          BlankSpan.INSTANCE);
       call = interceptedChannel.newCall(method, CALL_OPTIONS);
     }
 
@@ -1036,6 +1038,7 @@ public class CensusModulesTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void traceHeadersPropagateSpanContext() throws Exception {
     CallAttemptsTracerFactory callTracer =
         censusTracing.newClientCallTracer(fakeClientParentSpan, method);
@@ -1062,7 +1065,7 @@ public class CensusModulesTest {
     verify(spyServerSpanBuilder).setRecordEvents(eq(true));
 
     Context filteredContext = serverTracer.filterContext(Context.ROOT);
-    assertSame(spyServerSpan, ContextUtils.getValue(filteredContext));
+    assertSame(spyServerSpan, io.opencensus.trace.unsafe.ContextUtils.getValue(filteredContext));
   }
 
   @Test
@@ -1188,6 +1191,7 @@ public class CensusModulesTest {
     }
 
     Context filteredContext = tracer.filterContext(Context.ROOT);
+    @SuppressWarnings("deprecation")
     TagContext statsCtx = io.opencensus.tags.unsafe.ContextUtils.getValue(filteredContext);
     assertEquals(
         tagger
@@ -1280,6 +1284,7 @@ public class CensusModulesTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void serverBasicTracingNoHeaders() {
     ServerStreamTracer.Factory tracerFactory = censusTracing.getServerTracerFactory();
     ServerStreamTracer serverStreamTracer =
@@ -1290,7 +1295,7 @@ public class CensusModulesTest {
     verify(spyServerSpanBuilder).setRecordEvents(eq(true));
 
     Context filteredContext = serverStreamTracer.filterContext(Context.ROOT);
-    assertSame(spyServerSpan, ContextUtils.getValue(filteredContext));
+    assertSame(spyServerSpan, io.opencensus.trace.unsafe.ContextUtils.getValue(filteredContext));
 
     serverStreamTracer.serverCallStarted(
         new CallInfo<>(method, Attributes.EMPTY, null));
