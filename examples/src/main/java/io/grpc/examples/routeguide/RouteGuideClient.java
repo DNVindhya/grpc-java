@@ -26,7 +26,17 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.examples.routeguide.RouteGuideGrpc.RouteGuideBlockingStub;
 import io.grpc.examples.routeguide.RouteGuideGrpc.RouteGuideStub;
 import io.grpc.stub.StreamObserver;
+import io.opencensus.common.Duration;
+import io.opencensus.contrib.grpc.metrics.RpcViews;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
 import java.io.IOException;
+import java.lang.Integer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -128,7 +138,7 @@ public class RouteGuideClient {
       @Override
       public void onNext(RouteSummary summary) {
         info("Finished trip with {0} points. Passed {1} features. "
-            + "Travelled {2} meters. It took {3} seconds.", summary.getPointCount(),
+                + "Travelled {2} meters. It took {3} seconds.", summary.getPointCount(),
             summary.getFeatureCount(), summary.getDistance(), summary.getElapsedTime());
         if (testHelper != null) {
           testHelper.onMessage(summary);
@@ -239,49 +249,79 @@ public class RouteGuideClient {
   }
 
   /** Issues several different requests and then exits. */
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws InterruptedException, Exception {
     String target = "localhost:8980";
+    String project = "vindhyan-gke-dev";
+    int iterations = 1;
     if (args.length > 0) {
       if ("--help".equals(args[0])) {
-        System.err.println("Usage: [target]");
+        System.err.println("Usage: [target [project]]");
         System.err.println("");
         System.err.println("  target  The server to connect to. Defaults to " + target);
+        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
         System.exit(1);
       }
       target = args[0];
     }
-
-    List<Feature> features;
-    try {
-      features = RouteGuideUtil.parseFeatures(RouteGuideUtil.getDefaultFeaturesFile());
-    } catch (IOException ex) {
-      ex.printStackTrace();
-      return;
+    if (args.length > 1) {
+      project = args[1];
+    }
+    if (args.length > 2) {
+      iterations = Integer.parseInt(args[2]);
     }
 
-    ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-    try {
-      RouteGuideClient client = new RouteGuideClient(channel);
-      // Looking for a valid feature
-      client.getFeature(409146138, -746188906);
+    RpcViews.registerAllGrpcViews();
+    TraceConfig traceConfig = Tracing.getTraceConfig();
+    traceConfig.updateActiveTraceParams(
+        traceConfig.getActiveTraceParams().toBuilder()
+            .setSampler(Samplers.alwaysSample())
+            .build());
 
-      // Feature missing.
-      client.getFeature(0, 0);
+    StackdriverStatsExporter.createAndRegister(
+        StackdriverStatsConfiguration.builder()
+            .setProjectId(project)
+            .setExportInterval(Duration.create(5, 0))
+            .build());
+    StackdriverTraceExporter.createAndRegister(
+        StackdriverTraceConfiguration.builder()
+            .setProjectId(project)
+            .build());
 
-      // Looking for features between 40, -75 and 42, -73.
-      client.listFeatures(400000000, -750000000, 420000000, -730000000);
-
-      // Record a few randomly selected points from the features file.
-      client.recordRoute(features, 10);
-
-      // Send and receive some notes.
-      CountDownLatch finishLatch = client.routeChat();
-
-      if (!finishLatch.await(1, TimeUnit.MINUTES)) {
-        client.warning("routeChat can not finish within 1 minutes");
+    for (int i = 1; i <= iterations; i++) {
+      List<Feature> features;
+      try {
+        features = RouteGuideUtil.parseFeatures(RouteGuideUtil.getDefaultFeaturesFile());
+      } catch (IOException ex) {
+        ex.printStackTrace();
+        return;
       }
-    } finally {
-      channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+
+      ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+      try {
+        RouteGuideClient client = new RouteGuideClient(channel);
+        // Looking for a valid feature
+        client.getFeature(409146138, -746188906);
+
+        // Feature missing.
+        client.getFeature(0, 0);
+
+        // Looking for features between 40, -75 and 42, -73.
+        client.listFeatures(400000000, -750000000, 420000000, -730000000);
+
+        // Record a few randomly selected points from the features file.
+        client.recordRoute(features, 10);
+
+        // Send and receive some notes.
+        CountDownLatch finishLatch = client.routeChat();
+
+        if (!finishLatch.await(1, TimeUnit.MINUTES)) {
+          client.warning("routeChat can not finish within 1 minutes");
+        }
+      } finally {
+        channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+      }
+      System.out.println("Iteration: " + i);
+      TimeUnit.SECONDS.sleep(20);
     }
   }
 

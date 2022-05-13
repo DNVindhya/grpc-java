@@ -20,6 +20,15 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.opencensus.common.Duration;
+import io.opencensus.contrib.grpc.metrics.RpcViews;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,13 +72,15 @@ public class HelloWorldClient {
     String user = "world";
     // Access a service running on the local machine on port 50051
     String target = "localhost:50051";
+    String project = "vindhyan-gke-dev";
     // Allow passing in the user and target strings as command line arguments
     if (args.length > 0) {
       if ("--help".equals(args[0])) {
-        System.err.println("Usage: [name [target]]");
+        System.err.println("Usage: [name [target] [project]]");
         System.err.println("");
         System.err.println("  name    The name you wish to be greeted by. Defaults to " + user);
         System.err.println("  target  The server to connect to. Defaults to " + target);
+        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
         System.exit(1);
       }
       user = args[0];
@@ -77,6 +88,26 @@ public class HelloWorldClient {
     if (args.length > 1) {
       target = args[1];
     }
+    if (args.length > 2) {
+      project = args[2];
+    }
+
+    RpcViews.registerAllGrpcViews();
+    TraceConfig traceConfig = Tracing.getTraceConfig();
+    traceConfig.updateActiveTraceParams(
+        traceConfig.getActiveTraceParams().toBuilder()
+            .setSampler(Samplers.alwaysSample())
+            .build());
+
+    StackdriverStatsExporter.createAndRegister(
+        StackdriverStatsConfiguration.builder()
+            .setProjectId(project)
+            .setExportInterval(Duration.create(5, 0))
+            .build());
+    StackdriverTraceExporter.createAndRegister(
+        StackdriverTraceConfiguration.builder()
+            .setProjectId(project)
+            .build());
 
     // Create a communication channel to the server, known as a Channel. Channels are thread-safe
     // and reusable. It is common to create channels at the beginning of your application and reuse

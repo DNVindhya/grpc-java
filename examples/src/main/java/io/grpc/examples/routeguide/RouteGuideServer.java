@@ -28,6 +28,15 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.opencensus.common.Duration;
+import io.opencensus.contrib.grpc.metrics.RpcViews;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
+import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.config.TraceConfig;
+import io.opencensus.trace.samplers.Samplers;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -104,6 +113,34 @@ public class RouteGuideServer {
    * Main method.  This comment makes the linter happy.
    */
   public static void main(String[] args) throws Exception {
+    String project = "vindhyan-gke-dev";
+    // Allow passing in the user and target strings as command line arguments
+    if (args.length > 0) {
+      if ("--help".equals(args[0])) {
+        System.err.println("Usage: [project]");
+        System.err.println("");
+        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
+        System.exit(1);
+      }
+      project = args[0];
+    }
+    RpcViews.registerAllGrpcViews();
+    TraceConfig traceConfig = Tracing.getTraceConfig();
+    traceConfig.updateActiveTraceParams(
+        traceConfig.getActiveTraceParams().toBuilder()
+            .setSampler(Samplers.alwaysSample())
+            .build());
+
+    StackdriverStatsExporter.createAndRegister(
+        StackdriverStatsConfiguration.builder()
+            .setProjectId(project)
+            .setExportInterval(Duration.create(5, 0))
+            .build());
+    StackdriverTraceExporter.createAndRegister(
+        StackdriverTraceConfiguration.builder()
+            .setProjectId(project)
+            .build());
+
     RouteGuideServer server = new RouteGuideServer(8980);
     server.start();
     server.blockUntilShutdown();
