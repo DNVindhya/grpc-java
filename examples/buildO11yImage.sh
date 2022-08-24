@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 IMAGENAME=o11y-examples
-TAG=1.00
+TAG=1.50.0-SNAPSHOT_0823
 PROJECTID=vindhyan-gke-dev
 
 echo Building ${IMAGENAME}:${TAG}
