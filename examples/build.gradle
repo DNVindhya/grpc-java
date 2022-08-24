@@ -10,6 +10,8 @@ plugins {
 repositories {
     maven { // The google mirror is less flaky than mavenCentral()
         url "https://maven-central.storage-download.googleapis.com/maven2/" }
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots' }
     mavenCentral()
     mavenLocal()
 }
@@ -25,27 +27,19 @@ targetCompatibility = 1.8
 def grpcVersion = '1.50.0-SNAPSHOT' // CURRENT_GRPC_VERSION
 def protobufVersion = '3.21.1'
 def protocVersion = protobufVersion
-def protocGenVersion = '1.24.0'
-def opencensusVersion = "0.31.0"
+def protocGenVersion = '1.48.1'
 
 dependencies {
-    implementation platform("io.grpc:grpc-bom:${grpcVersion}")
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     compileOnly "org.apache.tomcat:annotations-api:6.0.53"
-    implementation "com.google.http-client:google-http-client-jackson2:1.41.7"
-
-    implementation "io.grpc:grpc-census:${grpcVersion}",
-            "io.opencensus:opencensus-api:${opencensusVersion}",
-            "io.opencensus:opencensus-contrib-grpc-metrics:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-stats-stackdriver:${opencensusVersion}",
-            "io.opencensus:opencensus-exporter-trace-stackdriver:${opencensusVersion}"
 
     // examples/advanced need this for JsonFormat
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+    // Observability package for Google Cloud
+    implementation "io.grpc:grpc-gcp-observability:${grpcVersion}"
 
-    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}",
-            "io.opencensus:opencensus-impl:${opencensusVersion}"
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
 
     testImplementation "io.grpc:grpc-testing:${grpcVersion}"
     testImplementation "junit:junit:4.12"

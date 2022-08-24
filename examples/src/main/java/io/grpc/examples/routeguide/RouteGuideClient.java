@@ -25,16 +25,8 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.examples.routeguide.RouteGuideGrpc.RouteGuideBlockingStub;
 import io.grpc.examples.routeguide.RouteGuideGrpc.RouteGuideStub;
+import io.grpc.gcp.observability.GcpObservability;
 import io.grpc.stub.StreamObserver;
-import io.opencensus.common.Duration;
-import io.opencensus.contrib.grpc.metrics.RpcViews;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.config.TraceConfig;
-import io.opencensus.trace.samplers.Samplers;
 import java.io.IOException;
 import java.lang.Integer;
 import java.util.Iterator;
@@ -251,42 +243,32 @@ public class RouteGuideClient {
   /** Issues several different requests and then exits. */
   public static void main(String[] args) throws InterruptedException, Exception {
     String target = "localhost:8980";
-    String project = "vindhyan-gke-dev";
     int iterations = 1;
+    int exportInterval = 40;
     if (args.length > 0) {
       if ("--help".equals(args[0])) {
-        System.err.println("Usage: [target [project]]");
+        System.err.println("Usage: [target] [ export interval]");
         System.err.println("");
         System.err.println("  target  The server to connect to. Defaults to " + target);
-        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
+        System.err.println(
+            "  iterations The number of times to run the client. Defaults to " + iterations);
+        System.err.println(
+            "  export interval The thread must be alive for export interval seconds for metrics to"
+                + " be sent. Defaults to "
+                + exportInterval);
         System.exit(1);
       }
       target = args[0];
     }
     if (args.length > 1) {
-      project = args[1];
+      iterations = Integer.parseInt(args[1]);
     }
     if (args.length > 2) {
-      iterations = Integer.parseInt(args[2]);
+      exportInterval = Integer.parseInt(args[2]);
     }
 
-    RpcViews.registerAllGrpcViews();
-    TraceConfig traceConfig = Tracing.getTraceConfig();
-    traceConfig.updateActiveTraceParams(
-        traceConfig.getActiveTraceParams().toBuilder()
-            .setSampler(Samplers.alwaysSample())
-            .build());
-
-    StackdriverStatsExporter.createAndRegister(
-        StackdriverStatsConfiguration.builder()
-            .setProjectId(project)
-            .setExportInterval(Duration.create(5, 0))
-            .build());
-    StackdriverTraceExporter.createAndRegister(
-        StackdriverTraceConfiguration.builder()
-            .setProjectId(project)
-            .build());
-
+    // call GcpObservability.grpcInit() to initialize & get observability
+    GcpObservability observability = GcpObservability.grpcInit();
     for (int i = 1; i <= iterations; i++) {
       List<Feature> features;
       try {
@@ -320,9 +302,11 @@ public class RouteGuideClient {
       } finally {
         channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
       }
-      System.out.println("Iteration: " + i);
-      TimeUnit.SECONDS.sleep(20);
+      System.out.println("Iteration : " + i);
     }
+    Thread.sleep(TimeUnit.MILLISECONDS.convert(exportInterval, TimeUnit.SECONDS));
+    // call close() on the observability instance to shutdown observability
+    observability.close();
   }
 
   private void info(String msg, Object... params) {

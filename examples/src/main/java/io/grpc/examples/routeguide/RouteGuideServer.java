@@ -27,16 +27,11 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.Status;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
+import io.grpc.gcp.observability.GcpObservability;
 import io.grpc.stub.StreamObserver;
-import io.opencensus.common.Duration;
-import io.opencensus.contrib.grpc.metrics.RpcViews;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.config.TraceConfig;
-import io.opencensus.trace.samplers.Samplers;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -109,41 +104,39 @@ public class RouteGuideServer {
     }
   }
 
+  private static int bidiErrorCount = 0;
+  private static Code code;
   /**
    * Main method.  This comment makes the linter happy.
    */
   public static void main(String[] args) throws Exception {
-    String project = "vindhyan-gke-dev";
+    code = Code.CANCELLED;
     // Allow passing in the user and target strings as command line arguments
     if (args.length > 0) {
       if ("--help".equals(args[0])) {
-        System.err.println("Usage: [project]");
+        System.err.println("Usage: [errorCount] [errorCode]");
         System.err.println("");
-        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
+        System.err.println(
+            "  bidiErrorCount Server returns error once every <bidiErrorCount> onNext() (globally"
+                + " counted). Defaults to "
+                + bidiErrorCount);
+        System.err.println(
+            "  errorCode Server returns gRPC error code once every <bidiErrorCount> onNext."
+                + " Defaults to "
+                + code
+                + " when bidiErrorCount > 0");
         System.exit(1);
       }
-      project = args[0];
+      bidiErrorCount = Integer.parseInt(args[0]);
     }
-    RpcViews.registerAllGrpcViews();
-    TraceConfig traceConfig = Tracing.getTraceConfig();
-    traceConfig.updateActiveTraceParams(
-        traceConfig.getActiveTraceParams().toBuilder()
-            .setSampler(Samplers.alwaysSample())
-            .build());
-
-    StackdriverStatsExporter.createAndRegister(
-        StackdriverStatsConfiguration.builder()
-            .setProjectId(project)
-            .setExportInterval(Duration.create(5, 0))
-            .build());
-    StackdriverTraceExporter.createAndRegister(
-        StackdriverTraceConfiguration.builder()
-            .setProjectId(project)
-            .build());
-
-    RouteGuideServer server = new RouteGuideServer(8980);
-    server.start();
-    server.blockUntilShutdown();
+    if (args.length > 1) {
+        code = Code.valueOf(args[1]);
+    }
+    try (GcpObservability gcpObservability = GcpObservability.grpcInit()) {
+      RouteGuideServer server = new RouteGuideServer(8980);
+      server.start();
+      server.blockUntilShutdown();
+    }
   }
 
   /**
@@ -246,6 +239,7 @@ public class RouteGuideServer {
       };
     }
 
+    static int responseCounter = 0;
     /**
      * Receives a stream of message/location pairs, and responds with a stream of all previous
      * messages at each of those locations.
@@ -262,6 +256,14 @@ public class RouteGuideServer {
 
           // Respond with all previous notes at this location.
           for (RouteNote prevNote : notes.toArray(new RouteNote[0])) {
+            if (bidiErrorCount > 0) {
+              if (++responseCounter == bidiErrorCount) {
+                responseCounter = 0;
+                logger.log(Level.WARNING, "Sending error " + code);
+                responseObserver.onError(new StatusRuntimeException(Status.fromCode(code)));
+                return;
+              }
+            }
             responseObserver.onNext(prevNote);
           }
 

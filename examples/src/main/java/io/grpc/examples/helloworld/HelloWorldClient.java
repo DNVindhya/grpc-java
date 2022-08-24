@@ -20,15 +20,7 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
-import io.opencensus.common.Duration;
-import io.opencensus.contrib.grpc.metrics.RpcViews;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsConfiguration;
-import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceConfiguration;
-import io.opencensus.exporter.trace.stackdriver.StackdriverTraceExporter;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.config.TraceConfig;
-import io.opencensus.trace.samplers.Samplers;
+import io.grpc.gcp.observability.GcpObservability;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -72,15 +64,25 @@ public class HelloWorldClient {
     String user = "world";
     // Access a service running on the local machine on port 50051
     String target = "localhost:50051";
-    String project = "vindhyan-gke-dev";
+    int iterations = 1;
+    int exportInterval = 40;
     // Allow passing in the user and target strings as command line arguments
     if (args.length > 0) {
       if ("--help".equals(args[0])) {
         System.err.println("Usage: [name [target] [project]]");
         System.err.println("");
-        System.err.println("  name    The name you wish to be greeted by. Defaults to " + user);
+        System.err.println(
+            "  name    The name you wish to be greeted by. Defaults to "
+                + user
+                + ". If name is prefixed with error followed by grpc error code, server return"
+                + " error code e.g errorDATA_LOSS");
         System.err.println("  target  The server to connect to. Defaults to " + target);
-        System.err.println("  project  The GCP project to send observability data to. Defaults to " + project);
+        System.err.println(
+            "  iterations The number of times to run the client. Defaults to " + iterations);
+        System.err.println(
+            "  export interval The thread must be alive for export interval seconds for metrics to"
+                + " be sent. Defaults to "
+                + exportInterval);
         System.exit(1);
       }
       user = args[0];
@@ -89,42 +91,36 @@ public class HelloWorldClient {
       target = args[1];
     }
     if (args.length > 2) {
-      project = args[2];
+      iterations = Integer.parseInt(args[2]);
+    }
+    if (args.length > 3) {
+      exportInterval = Integer.parseInt(args[3]);
     }
 
-    RpcViews.registerAllGrpcViews();
-    TraceConfig traceConfig = Tracing.getTraceConfig();
-    traceConfig.updateActiveTraceParams(
-        traceConfig.getActiveTraceParams().toBuilder()
-            .setSampler(Samplers.alwaysSample())
-            .build());
-
-    StackdriverStatsExporter.createAndRegister(
-        StackdriverStatsConfiguration.builder()
-            .setProjectId(project)
-            .setExportInterval(Duration.create(5, 0))
-            .build());
-    StackdriverTraceExporter.createAndRegister(
-        StackdriverTraceConfiguration.builder()
-            .setProjectId(project)
-            .build());
-
-    // Create a communication channel to the server, known as a Channel. Channels are thread-safe
-    // and reusable. It is common to create channels at the beginning of your application and reuse
-    // them until the application shuts down.
-    ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
-        // Channels are secure by default (via SSL/TLS). For the example we disable TLS to avoid
-        // needing certificates.
-        .usePlaintext()
-        .build();
-    try {
-      HelloWorldClient client = new HelloWorldClient(channel);
-      client.greet(user);
-    } finally {
-      // ManagedChannels use resources like threads and TCP connections. To prevent leaking these
-      // resources the channel should be shut down when it will no longer be used. If it may be used
-      // again leave it running.
-      channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+    // call GcpObservability.grpcInit() to initialize & get observability
+    GcpObservability observability = GcpObservability.grpcInit();
+    for (int i = 1; i <= iterations; i++) {
+      // Create a communication channel to the server, known as a Channel. Channels are thread-safe
+      // and reusable. It is common to create channels at the beginning of your application and reuse
+      // them until the application shuts down.
+      ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
+          // Channels are secure by default (via SSL/TLS). For the example we disable TLS to avoid
+          // needing certificates.
+          .usePlaintext()
+          .build();
+      try {
+        HelloWorldClient client = new HelloWorldClient(channel);
+        client.greet(user);
+      } finally {
+        // ManagedChannels use resources like threads and TCP connections. To prevent leaking these
+        // resources the channel should be shut down when it will no longer be used. If it may be used
+        // again leave it running.
+        channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+      }
+      System.out.println("Iteration : " + i);
     }
+    Thread.sleep(TimeUnit.MILLISECONDS.convert(exportInterval, TimeUnit.SECONDS));
+    // call close() on the observability instance to shutdown observability
+    observability.close();
   }
 }

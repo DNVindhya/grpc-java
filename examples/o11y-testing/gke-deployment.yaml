@@ -1,30 +1,30 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: example-grpc-server
+  name: grpc-server-namespace-ui
   labels:
-    name: example-grpc-server
+    environment: dev
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: example-grpc-client
+  name: grpc-client-namespace-ui
   labels:
-    name: example-grpc-client
+    environment: dev
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: example-grpc-server-sc
-  namespace: example-grpc-server
+  name: grpc-server-sa-ui
+  namespace: grpc-server-namespace-ui
   annotations:
     iam.gke.io/gcp-service-account: ${PROJNUM}-compute@developer.gserviceaccount.com
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: example-grpc-client-sc
-  namespace: example-grpc-client
+  name: grpc-client-sa-ui
+  namespace: grpc-client-namespace-ui
   annotations:
     iam.gke.io/gcp-service-account: ${PROJNUM}-compute@developer.gserviceaccount.com
 ---
@@ -32,37 +32,55 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: appconfig
-  namespace: example-grpc-server
+  namespace: grpc-server-namespace-ui
 data:
   GRPC_CONFIG_OBSERVABILITY: |
     {
+      "enable_cloud_monitoring": true,
+      "enable_cloud_trace": true,
       "enable_cloud_logging": true,
+      "destination_project_id": "grpc-testing",
       "log_filters": [{
-          "pattern": "*"
-      }]
+        "pattern": "*",
+        "header_bytes": 4096,
+        "message_bytes": 4096
+      }],
+      "global_trace_sampling_rate": 1.00,
+      "custom_tags": {
+        "grpc_server" : "true"
+      }
     }
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: appconfig
-  namespace: example-grpc-client
+  namespace: grpc-client-namespace-ui
 data:
   GRPC_CONFIG_OBSERVABILITY: |
     {
+      "enable_cloud_monitoring": true,
+      "enable_cloud_trace": true,
       "enable_cloud_logging": true,
+      "destination_project_id": "grpc-testing",
       "log_filters": [{
-          "pattern": "*"
-      }]
+        "pattern": "*",
+        "header_bytes": 4096,
+        "message_bytes": 4096
+      }],
+      "global_trace_sampling_rate": 1.00,
+      "custom_tags": {
+        "grpc_client": "true"
+      }
     }
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: example-grpc-server
-  namespace: example-grpc-server
+  name: grpc-server-service-ui
+  namespace: grpc-server-namespace-ui
   labels:
-    k8s-app: example-grpc-server
+    k8s-app: grpc-server-app-ui
 spec:
   ports:
   - name: helloworld
@@ -70,38 +88,37 @@ spec:
     protocol: TCP
     targetPort: 50051
   selector:
-    k8s-app: example-grpc-server
+    k8s-app: example-grpc-server-ui
   type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: example-grpc-server
-  namespace: example-grpc-server
+  name: grpc-server-deployment-ui
+  namespace: grpc-server-namespace-ui
   labels:
-    k8s-app: example-grpc-server
+    k8s-app: grpc-server-app-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      k8s-app: example-grpc-server
+      k8s-app: grpc-server-app-ui
   strategy: {}
   template:
     metadata:
       labels:
-        k8s-app: example-grpc-server
+        k8s-app: grpc-server-app-ui
     spec:
       containers:
-      - image: gcr.io/vindhyan-gke-dev/o11y-examples:1.00
+      - image: gcr.io/grpc-testing/vindhyan_o11y_examples:1.50.0-SNAPSHOT_0823
         imagePullPolicy: Always
-        name: &container1name example-grpc-server-container
+        name: &container1 grpc-server-container-ui
         env:
         - name: CONTAINER_NAME
-          value: *container1name
+          value: *container1
         - name: NAMESPACE
           valueFrom:
             fieldRef:
-              apiVersion: v1
               fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
@@ -116,37 +133,36 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
-      serviceAccountName: example-grpc-server-sc
+      serviceAccountName: grpc-server-sa-ui
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: example-grpc-client
-  namespace: example-grpc-client
+  name: grpc-client-deployment-ui
+  namespace: grpc-client-namespace-ui
   labels:
-    k8s-app: example-grpc-client
+    k8s-app: grpc-client-app-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      k8s-app: example-grpc-client
+      k8s-app: grpc-client-app-ui
   strategy: {}
   template:
     metadata:
       labels:
-        k8s-app: example-grpc-client
+        k8s-app: grpc-client-app-ui
     spec:
       containers:
-      - image: gcr.io/vindhyan-gke-dev/o11y-examples:1.00
+      - image: gcr.io/grpc-testing/vindhyan_o11y_examples:1.50.0-SNAPSHOT_0823
         imagePullPolicy: Always
-        name: &container2name example-grpc-client-container
+        name: &container2 grpc-client-container-ui
         env:
         - name: CONTAINER_NAME
-          value: *container2name
+          value: *container2
         - name: NAMESPACE
           valueFrom:
             fieldRef:
-              apiVersion: v1
               fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
@@ -158,4 +174,4 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
-      serviceAccountName: example-grpc-client-sc
+      serviceAccountName: grpc-client-sa-ui
