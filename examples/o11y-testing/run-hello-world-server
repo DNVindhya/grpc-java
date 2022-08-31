@@ -1,0 +1,3 @@
+#!/bin/bash
+set -e
+./build/install/examples/bin/hello-world-server

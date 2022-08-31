@@ -2,7 +2,7 @@
 
 IMAGENAME=o11y-examples
 TAG=1.50.0-SNAPSHOT_0823
-PROJECTID=vindhyan-gke-dev
+PROJECTID=`gcloud config get-value project`
 
 echo Building ${IMAGENAME}:${TAG}
 

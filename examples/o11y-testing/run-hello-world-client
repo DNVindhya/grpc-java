@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+./build/install/examples/bin/hello-world-client foo $1:50051
+

@@ -3,7 +3,11 @@ FROM openjdk:11
 RUN mkdir -p /build/install/examples
 
 ADD build/install/examples /build/install/examples
+
 ADD o11y-testing/*.py /o11y-testing/
+ADD o11y-testing/run-* /o11y-testing/
+RUN chmod +x /o11y-testing/*.py
+RUN chmod +x /o11y-testing/run-*
 
 ARG builddate
 ENV IMAGE_DATE=$builddate
