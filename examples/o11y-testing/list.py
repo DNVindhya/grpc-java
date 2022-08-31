@@ -48,7 +48,7 @@ print('')
 
 
 # Trace
-print("## Trace")
+print("--> Trace")
 
 trace_client = trace_v1.TraceServiceClient()
 
@@ -63,7 +63,7 @@ for response in page_result:
 
 
 # Logging
-print("## Logging")
+print("--> Logging")
 
 logging_client = logging_v2.Client()
 logging_client.setup_logging()
