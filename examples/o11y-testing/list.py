@@ -67,8 +67,8 @@ print("## Logging")
 
 logging_client = logging_v2.Client()
 logging_client.setup_logging()
-logger = logging_client.logger("projects/stanleycheung-gke2-dev/logs/microservices.googleapis.com%2Fobservability%2Fgrpc")
+logger = logging_client.logger("microservices.googleapis.com%2Fobservability%2Fgrpc")
 
 for entry in logger.list_entries():
     timestamp = entry.timestamp.isoformat()
-    print("* {}: {}".format(timestamp, entry.payload))
+    print("* {}: {}".format(timestamp, entry.payload['event_type']))

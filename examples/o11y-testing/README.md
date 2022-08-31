@@ -12,6 +12,9 @@ In `.../grpc-java/examples` directory
 ## Prerequisites:
 
 1. Kubernetes Cluster
+
+  - Important: when creating the cluster (on the Cloud Console), under Node Pools > default-pool > Security, make sure you select "Allow full access to all Cloud APIs".
+
 2. Get authentication credentials for the cluster   
    `gcloud container clusters get-credentials <cluster-name>`
 
@@ -100,7 +103,7 @@ this will make the server return error DATA-LOSS after every 7th onNext() (globa
 ---------------------------------------------------------------
 ## Experimental Python client
 
-After step 8 above,
+After step 8 above, from the client pod:
 
 Run `python3 o11y-testing/test.py` to send one custom metric `custom.googleapis.com/my_metric`.
 
