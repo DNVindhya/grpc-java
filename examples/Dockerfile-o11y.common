@@ -3,6 +3,7 @@ FROM openjdk:11
 RUN mkdir -p /build/install/examples
 
 ADD build/install/examples /build/install/examples
+ADD o11y-testing/*.py /o11y-testing/
 
 ARG builddate
 ENV IMAGE_DATE=$builddate
@@ -13,7 +14,13 @@ EXPOSE 8000
 
 ################################################
 # jove
-RUN\
-  apt-get update &&\
-  apt-get install -y jove &&\
+RUN \
+  apt-get update && \
+  apt-get install -y jove emacs python3-pip && \
   apt-get clean
+
+RUN pip3 install google-cloud-monitoring \
+  google-cloud-trace \
+  google-cloud-logging \
+  google-auth
+

@@ -96,3 +96,12 @@ this will make the server return error DATA-LOSS after every 7th onNext() (globa
 
 `./o11y-testing/example-cleanup.sh`
 
+
+---------------------------------------------------------------
+## Experimental Python client
+
+After step 8 above,
+
+Run `python3 o11y-testing/test.py` to send one custom metric `custom.googleapis.com/my_metric`.
+
+Run `python3 o11y-testing/list.py` to query recent metrics / trace / logging.
