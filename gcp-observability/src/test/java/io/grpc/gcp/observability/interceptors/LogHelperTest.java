@@ -29,7 +29,6 @@ import static org.mockito.Mockito.verify;
 import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Duration;
-import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Durations;
 import io.grpc.Attributes;
 import io.grpc.Grpc;
@@ -44,7 +43,6 @@ import io.grpc.observabilitylog.v1.GrpcLogRecord;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.Address;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.EventLogger;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.EventType;
-import io.grpc.observabilitylog.v1.GrpcLogRecord.LogLevel;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.MetadataEntry;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -100,8 +98,6 @@ public class LogHelperTest {
 
   private final Metadata nonEmptyMetadata = new Metadata();
   private final Sink sink = mock(GcpLogSink.class);
-  private final Timestamp timestamp
-      = Timestamp.newBuilder().setSeconds(9876).setNanos(54321).build();
   private final TimeProvider timeProvider = () -> TimeUnit.SECONDS.toNanos(9876) + 54321;
   private final LogHelper logHelper = new LogHelper(sink, timeProvider);
 
@@ -240,7 +236,7 @@ public class LogHelperTest {
         StandardCharsets.US_ASCII);
     assertThat(messageTestHelper(bytes, Integer.MAX_VALUE))
         .isEqualTo(GrpcLogRecord.newBuilder()
-            .setMessage(ByteString.copyFrom(bytes))
+            .setRpcMessage(ByteString.copyFrom(bytes))
             .setPayloadSize(bytes.length)
             .build());
   }
@@ -260,7 +256,8 @@ public class LogHelperTest {
     String truncatedMessage = "this is a ";
     assertThat(messageTestHelper(bytes, limit))
         .isEqualTo(GrpcLogRecord.newBuilder()
-            .setMessage(ByteString.copyFrom(truncatedMessage.getBytes(StandardCharsets.US_ASCII)))
+            .setRpcMessage(
+                ByteString.copyFrom(truncatedMessage.getBytes(StandardCharsets.US_ASCII)))
             .setPayloadSize(bytes.length)
             .setPayloadTruncated(true)
             .build());
@@ -283,16 +280,14 @@ public class LogHelperTest {
         metadataToProtoTestHelper(EventType.GRPC_CALL_REQUEST_HEADER, nonEmptyMetadata,
             HEADER_LIMIT)
             .toBuilder()
-            .setTimestamp(timestamp)
             .setSequenceId(seqId)
             .setServiceName(serviceName)
             .setMethodName(methodName)
+            .setAuthority(authority)
             .setEventType(EventType.GRPC_CALL_REQUEST_HEADER)
             .setEventLogger(EventLogger.LOGGER_CLIENT)
-            .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
             .setRpcId(rpcId);
-    builder.setAuthority(authority)
-        .setTimeout(timeout);
+    builder.setTimeout(timeout);
     GrpcLogRecord base = builder.build();
 
     // logged on client
@@ -374,6 +369,7 @@ public class LogHelperTest {
     long seqId = 1;
     String serviceName = "service";
     String methodName = "method";
+    String authority = "authority";
     String rpcId = "d155e885-9587-4e77-81f7-3aa5a443d47f";
     InetAddress address = InetAddress.getByName("127.0.0.1");
     int port = 12345;
@@ -383,13 +379,12 @@ public class LogHelperTest {
         metadataToProtoTestHelper(EventType.GRPC_CALL_RESPONSE_HEADER, nonEmptyMetadata,
             HEADER_LIMIT)
             .toBuilder()
-            .setTimestamp(timestamp)
             .setSequenceId(seqId)
             .setServiceName(serviceName)
             .setMethodName(methodName)
+            .setAuthority(authority)
             .setEventType(EventType.GRPC_CALL_RESPONSE_HEADER)
             .setEventLogger(EventLogger.LOGGER_CLIENT)
-            .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
             .setRpcId(rpcId);
     builder.setPeerAddress(LogHelper.socketAddressToProto(peerAddress));
     GrpcLogRecord base = builder.build();
@@ -400,6 +395,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           nonEmptyMetadata,
           HEADER_LIMIT,
           EventLogger.LOGGER_CLIENT,
@@ -414,6 +410,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           nonEmptyMetadata,
           HEADER_LIMIT,
           EventLogger.LOGGER_SERVER,
@@ -432,6 +429,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           nonEmptyMetadata,
           HEADER_LIMIT,
           EventLogger.LOGGER_SERVER,
@@ -450,6 +448,7 @@ public class LogHelperTest {
     long seqId = 1;
     String serviceName = "service";
     String methodName = "method";
+    String authority = "authority";
     String rpcId = "d155e885-9587-4e77-81f7-3aa5a443d47f";
     InetAddress address = InetAddress.getByName("127.0.0.1");
     int port = 12345;
@@ -460,13 +459,12 @@ public class LogHelperTest {
         metadataToProtoTestHelper(EventType.GRPC_CALL_RESPONSE_HEADER, nonEmptyMetadata,
             HEADER_LIMIT)
             .toBuilder()
-            .setTimestamp(timestamp)
             .setSequenceId(seqId)
             .setServiceName(serviceName)
             .setMethodName(methodName)
+            .setAuthority(authority)
             .setEventType(EventType.GRPC_CALL_TRAILER)
             .setEventLogger(EventLogger.LOGGER_CLIENT)
-            .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
             .setStatusCode(Status.INTERNAL.getCode().value())
             .setStatusMessage("test description")
             .setRpcId(rpcId);
@@ -479,6 +477,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           statusDescription,
           nonEmptyMetadata,
           HEADER_LIMIT,
@@ -494,6 +493,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           statusDescription,
           nonEmptyMetadata,
           HEADER_LIMIT,
@@ -513,6 +513,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           statusDescription,
           nonEmptyMetadata,
           HEADER_LIMIT,
@@ -531,6 +532,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           statusDescription.getCode().toStatus(),
           nonEmptyMetadata,
           HEADER_LIMIT,
@@ -576,18 +578,18 @@ public class LogHelperTest {
     long seqId = 1;
     String serviceName = "service";
     String methodName = "method";
+    String authority = "authority";
     String rpcId = "d155e885-9587-4e77-81f7-3aa5a443d47f";
     byte[] message = new byte[100];
 
     GrpcLogRecord.Builder builder = messageTestHelper(message, MESSAGE_LIMIT)
         .toBuilder()
-        .setTimestamp(timestamp)
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_REQUEST_MESSAGE)
         .setEventLogger(EventLogger.LOGGER_CLIENT)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setRpcId(rpcId);
     GrpcLogRecord base = builder.build();
     // request message
@@ -596,6 +598,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           EventType.GRPC_CALL_REQUEST_MESSAGE,
           message,
           MESSAGE_LIMIT,
@@ -609,6 +612,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           EventType.GRPC_CALL_RESPONSE_MESSAGE,
           message,
           MESSAGE_LIMIT,
@@ -625,6 +629,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           EventType.GRPC_CALL_REQUEST_MESSAGE,
           message,
           MESSAGE_LIMIT,
@@ -641,6 +646,7 @@ public class LogHelperTest {
           seqId,
           serviceName,
           methodName,
+          authority,
           EventType.GRPC_CALL_RESPONSE_MESSAGE,
           message,
           MESSAGE_LIMIT,
@@ -680,7 +686,7 @@ public class LogHelperTest {
     GrpcLogRecord.Builder builder = GrpcLogRecord.newBuilder();
     PayloadBuilder<ByteString> pair
         = LogHelper.createMessageProto(message, maxMessageBytes);
-    builder.setMessage(pair.payload);
+    builder.setRpcMessage(pair.payload);
     builder.setPayloadSize(pair.size);
     builder.setPayloadTruncated(pair.truncated);
     return builder.build();

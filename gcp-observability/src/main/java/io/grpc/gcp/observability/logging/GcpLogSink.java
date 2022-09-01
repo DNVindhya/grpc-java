@@ -23,7 +23,6 @@ import com.google.cloud.logging.LogEntry;
 import com.google.cloud.logging.Logging;
 import com.google.cloud.logging.LoggingOptions;
 import com.google.cloud.logging.Payload.JsonPayload;
-import com.google.cloud.logging.Severity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -107,12 +106,10 @@ public class GcpLogSink implements Sink {
     }
     try {
       GrpcLogRecord.EventType event = logProto.getEventType();
-      Severity logEntrySeverity = getCloudLoggingLevel(logProto.getLogLevel());
       // TODO(DNVindhya): make sure all (int, long) values are not displayed as double
       // For now, every value is being converted as string because of JsonFormat.printer().print
       LogEntry.Builder grpcLogEntryBuilder =
           LogEntry.newBuilder(JsonPayload.of(protoToMapConverter(logProto)))
-              .setSeverity(logEntrySeverity)
               .setLogName(DEFAULT_LOG_NAME)
               .setResource(kubernetesResource);
 
@@ -178,24 +175,6 @@ public class GcpLogSink implements Sink {
     JsonFormat.Printer printer = JsonFormat.printer().preservingProtoFieldNames();
     String recordJson = printer.print(logProto);
     return (Map<String, Object>) JsonParser.parse(recordJson);
-  }
-
-  private Severity getCloudLoggingLevel(GrpcLogRecord.LogLevel recordLevel) {
-    switch (recordLevel.getNumber()) {
-      case 1: // GrpcLogRecord.LogLevel.LOG_LEVEL_TRACE
-      case 2: // GrpcLogRecord.LogLevel.LOG_LEVEL_DEBUG
-        return Severity.DEBUG;
-      case 3: // GrpcLogRecord.LogLevel.LOG_LEVEL_INFO
-        return Severity.INFO;
-      case 4: // GrpcLogRecord.LogLevel.LOG_LEVEL_WARN
-        return Severity.WARNING;
-      case 5: // GrpcLogRecord.LogLevel.LOG_LEVEL_ERROR
-        return Severity.ERROR;
-      case 6: // GrpcLogRecord.LogLevel.LOG_LEVEL_CRITICAL
-        return Severity.CRITICAL;
-      default:
-        return Severity.DEFAULT;
-    }
   }
 
   /**

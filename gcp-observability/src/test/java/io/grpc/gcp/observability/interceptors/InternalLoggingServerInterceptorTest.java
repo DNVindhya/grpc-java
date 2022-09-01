@@ -192,6 +192,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(2L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           same(serverInitial),
           eq(filterParams.headerBytes()),
           eq(EventLogger.LOGGER_SERVER),
@@ -212,6 +213,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(3L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventType.GRPC_CALL_REQUEST_MESSAGE),
           same(request),
           eq(filterParams.messageBytes()),
@@ -231,6 +233,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(4L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventLogger.LOGGER_SERVER),
           anyString());
       verifyNoMoreInteractions(mockLogHelper);
@@ -248,6 +251,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(5L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventType.GRPC_CALL_RESPONSE_MESSAGE),
           same(response),
           eq(filterParams.messageBytes()),
@@ -269,6 +273,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(6L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           same(status),
           same(trailers),
           eq(filterParams.headerBytes()),
@@ -290,6 +295,7 @@ public class InternalLoggingServerInterceptorTest {
           /*seq=*/ eq(7L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventLogger.LOGGER_SERVER),
           anyString());
       verify(mockListener).onCancel();
@@ -549,6 +555,7 @@ public class InternalLoggingServerInterceptorTest {
       interceptedLoggingCall.get().close(status, trailers);
       verify(mockLogHelper, never()).logHalfClose(
           anyLong(),
+          AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           any(GrpcLogRecord.EventLogger.class),

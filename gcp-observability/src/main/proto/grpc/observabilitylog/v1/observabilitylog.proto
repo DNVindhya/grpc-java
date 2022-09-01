@@ -50,19 +50,6 @@ message GrpcLogRecord {
     LOGGER_CLIENT = 1;
     LOGGER_SERVER = 2;
   }
-  // The log severity level of the log entry
-  enum LogLevel {
-    LOG_LEVEL_UNKNOWN = 0;
-    LOG_LEVEL_TRACE = 1;
-    LOG_LEVEL_DEBUG = 2;
-    LOG_LEVEL_INFO = 3;
-    LOG_LEVEL_WARN = 4;
-    LOG_LEVEL_ERROR = 5;
-    LOG_LEVEL_CRITICAL = 6;
-  }
-
-  // The timestamp of the log event
-  google.protobuf.Timestamp timestamp = 1;
 
   // Uniquely identifies a call. The value must not be 0 in order to disambiguate
   // from an unset value.
@@ -78,8 +65,6 @@ message GrpcLogRecord {
   string service_name = 5;
   // the name of the RPC method
   string method_name = 6;
-
-  LogLevel log_level = 7;        // one of the above LogLevel enum
 
   // Peer address information. On client side, peer is logged on server
   // header event or trailer event (if trailer-only). On server side, peer
@@ -114,7 +99,7 @@ message GrpcLogRecord {
   uint64 sequence_id = 16;
 
   // Used by message event
-  bytes message = 17;
+  bytes rpc_message = 17;
 
   // The gRPC status code
   uint32 status_code = 18;

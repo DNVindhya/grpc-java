@@ -123,7 +123,7 @@ public class LoggingTest {
           new InternalLoggingServerInterceptor.FactoryImpl(spyLogHelper, mockFilterHelper);
 
       when(config.isEnableCloudLogging()).thenReturn(true);
-      FilterParams logAlwaysFilterParams = FilterParams.create(true, 0, 0);
+      FilterParams logAlwaysFilterParams = FilterParams.create(true, 1024, 1024);
       when(mockFilterHelper.isMethodToBeLogged(any(MethodDescriptor.class)))
           .thenReturn(logAlwaysFilterParams);
       when(mockFilterHelper.isEventToBeLogged(any(GrpcLogRecord.EventType.class))).thenReturn(true);

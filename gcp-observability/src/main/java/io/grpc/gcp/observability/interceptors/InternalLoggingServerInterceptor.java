@@ -137,6 +137,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                     seq.getAndIncrement(),
                     serviceName,
                     methodName,
+                    authority,
                     headers,
                     maxHeaderBytes,
                     EventLogger.LOGGER_SERVER,
@@ -159,6 +160,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                     seq.getAndIncrement(),
                     serviceName,
                     methodName,
+                    authority,
                     responseMessageType,
                     message,
                     maxMessageBytes,
@@ -180,6 +182,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                     seq.getAndIncrement(),
                     serviceName,
                     methodName,
+                    authority,
                     status,
                     trailers,
                     maxHeaderBytes,
@@ -206,6 +209,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 requestMessageType,
                 message,
                 maxMessageBytes,
@@ -227,6 +231,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 EventLogger.LOGGER_SERVER,
                 rpcId);
           } catch (Exception e) {
@@ -245,6 +250,7 @@ public final class InternalLoggingServerInterceptor implements ServerInterceptor
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 EventLogger.LOGGER_SERVER,
                 rpcId);
           } catch (Exception e) {

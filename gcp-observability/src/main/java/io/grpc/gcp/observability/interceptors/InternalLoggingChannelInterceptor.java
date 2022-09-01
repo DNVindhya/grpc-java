@@ -147,6 +147,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                         seq.getAndIncrement(),
                         serviceName,
                         methodName,
+                        authority,
                         responseMessageType,
                         message,
                         maxMessageBytes,
@@ -168,6 +169,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                         seq.getAndIncrement(),
                         serviceName,
                         methodName,
+                        authority,
                         headers,
                         maxHeaderBytes,
                         EventLogger.LOGGER_CLIENT,
@@ -189,6 +191,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                         seq.getAndIncrement(),
                         serviceName,
                         methodName,
+                        authority,
                         status,
                         trailers,
                         maxHeaderBytes,
@@ -215,6 +218,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 requestMessageType,
                 message,
                 maxMessageBytes,
@@ -236,6 +240,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 EventLogger.LOGGER_CLIENT,
                 rpcId);
           } catch (Exception e) {
@@ -254,6 +259,7 @@ public final class InternalLoggingChannelInterceptor implements ClientIntercepto
                 seq.getAndIncrement(),
                 serviceName,
                 methodName,
+                authority,
                 EventLogger.LOGGER_CLIENT,
                 rpcId);
           } catch (Exception e) {

@@ -211,6 +211,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(2L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           same(serverInitial),
           eq(filterParams.headerBytes()),
           eq(EventLogger.LOGGER_CLIENT),
@@ -231,6 +232,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(3L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventType.GRPC_CALL_REQUEST_MESSAGE),
           same(request),
           eq(filterParams.messageBytes()),
@@ -250,6 +252,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(4L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventLogger.LOGGER_CLIENT),
           anyString());
       halfCloseCalled.get(1, TimeUnit.MILLISECONDS);
@@ -267,6 +270,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(5L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventType.GRPC_CALL_RESPONSE_MESSAGE),
           same(response),
           eq(filterParams.messageBytes()),
@@ -288,6 +292,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(6L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           same(status),
           same(trailers),
           eq(filterParams.headerBytes()),
@@ -308,6 +313,7 @@ public class InternalLoggingChannelInterceptorTest {
           /*seq=*/ eq(7L),
           eq("service"),
           eq("method"),
+          eq("the-authority"),
           eq(EventLogger.LOGGER_CLIENT),
           anyString());
       cancelCalled.get(1, TimeUnit.MILLISECONDS);
@@ -712,6 +718,7 @@ public class InternalLoggingChannelInterceptorTest {
       interceptedListener.get().onHeaders(new Metadata());
       verify(mockLogHelper, never()).logResponseHeader(
           anyLong(),
+          AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           AdditionalMatchers.or(ArgumentMatchers.isNull(), anyString()),
           any(Metadata.class),

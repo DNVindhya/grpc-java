@@ -22,7 +22,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Charsets;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Duration;
-import com.google.protobuf.util.Timestamps;
 import io.grpc.Attributes;
 import io.grpc.Deadline;
 import io.grpc.Grpc;
@@ -36,7 +35,6 @@ import io.grpc.observabilitylog.v1.GrpcLogRecord;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.Address;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.EventLogger;
 import io.grpc.observabilitylog.v1.GrpcLogRecord.EventType;
-import io.grpc.observabilitylog.v1.GrpcLogRecord.LogLevel;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -63,6 +61,7 @@ public class LogHelper {
           Metadata.BINARY_BYTE_MARSHALLER);
 
   private final Sink sink;
+  @SuppressWarnings("unused")
   private final TimeProvider timeProvider;
 
   /**
@@ -100,14 +99,13 @@ public class LogHelper {
 
     PayloadBuilder<GrpcLogRecord.Metadata.Builder> pair =
         createMetadataProto(metadata, maxHeaderBytes);
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
         .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_REQUEST_HEADER)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setMetadata(pair.payload)
         .setPayloadSize(pair.size)
         .setPayloadTruncated(pair.truncated)
@@ -128,6 +126,7 @@ public class LogHelper {
       long seqId,
       String serviceName,
       String methodName,
+      String authority,
       Metadata metadata,
       int maxHeaderBytes,
       GrpcLogRecord.EventLogger eventLogger,
@@ -144,13 +143,13 @@ public class LogHelper {
 
     PayloadBuilder<GrpcLogRecord.Metadata.Builder> pair =
         createMetadataProto(metadata, maxHeaderBytes);
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_RESPONSE_HEADER)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setMetadata(pair.payload)
         .setPayloadSize(pair.size)
         .setPayloadTruncated(pair.truncated)
@@ -168,6 +167,7 @@ public class LogHelper {
       long seqId,
       String serviceName,
       String methodName,
+      String authority,
       Status status,
       Metadata metadata,
       int maxHeaderBytes,
@@ -184,13 +184,13 @@ public class LogHelper {
 
     PayloadBuilder<GrpcLogRecord.Metadata.Builder> pair =
         createMetadataProto(metadata, maxHeaderBytes);
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_TRAILER)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setMetadata(pair.payload)
         .setPayloadSize(pair.size)
         .setPayloadTruncated(pair.truncated)
@@ -217,6 +217,7 @@ public class LogHelper {
       long seqId,
       String serviceName,
       String methodName,
+      String authority,
       EventType eventType,
       T message,
       int maxMessageBytes,
@@ -249,19 +250,19 @@ public class LogHelper {
       pair = createMessageProto(messageBytesArray, maxMessageBytes);
     }
 
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(eventType)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setRpcId(rpcId);
     if (pair != null && pair.size != 0) {
       logEntryBuilder.setPayloadSize(pair.size);
     }
     if (pair != null && pair.payload != null) {
-      logEntryBuilder.setMessage(pair.payload)
+      logEntryBuilder.setRpcMessage(pair.payload)
           .setPayloadTruncated(pair.truncated);
     }
     sink.write(logEntryBuilder.build());
@@ -274,19 +275,20 @@ public class LogHelper {
       long seqId,
       String serviceName,
       String methodName,
+      String authority,
       GrpcLogRecord.EventLogger eventLogger,
       String rpcId) {
     checkNotNull(serviceName, "serviceName");
     checkNotNull(methodName, "methodName");
     checkNotNull(rpcId, "rpcId");
 
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_HALF_CLOSE)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setRpcId(rpcId);
     sink.write(logEntryBuilder.build());
   }
@@ -298,26 +300,22 @@ public class LogHelper {
       long seqId,
       String serviceName,
       String methodName,
+      String authority,
       GrpcLogRecord.EventLogger eventLogger,
       String rpcId) {
     checkNotNull(serviceName, "serviceName");
     checkNotNull(methodName, "methodName");
     checkNotNull(rpcId, "rpcId");
 
-    GrpcLogRecord.Builder logEntryBuilder = createTimestamp()
+    GrpcLogRecord.Builder logEntryBuilder = GrpcLogRecord.newBuilder()
         .setSequenceId(seqId)
         .setServiceName(serviceName)
         .setMethodName(methodName)
+        .setAuthority(authority)
         .setEventType(EventType.GRPC_CALL_CANCEL)
         .setEventLogger(eventLogger)
-        .setLogLevel(LogLevel.LOG_LEVEL_DEBUG)
         .setRpcId(rpcId);
     sink.write(logEntryBuilder.build());
-  }
-
-  GrpcLogRecord.Builder createTimestamp() {
-    long nanos = timeProvider.currentTimeNanos();
-    return GrpcLogRecord.newBuilder().setTimestamp(Timestamps.fromNanos(nanos));
   }
 
   // TODO(DNVindhya): Evaluate if we need following clause for metadata logging in GcpObservability
