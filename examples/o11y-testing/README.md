@@ -6,7 +6,7 @@ In `.../grpc-java/examples` directory
 
 
 2. `./buildO11yImage.sh`   
-   You should find the image in [gcr.io/vindhyan-gke-dev/o11y-examples]
+   You should find the image in [gcr.io/{project}/o11y-examples]
 
 ---------------------------------------------------------------
 ## Prerequisites:
@@ -17,6 +17,8 @@ In `.../grpc-java/examples` directory
 
 2. Get authentication credentials for the cluster   
    `gcloud container clusters get-credentials <cluster-name>`
+   
+  - You can verify with `kubectl config view`
 
 ---------------------------------------------------------------
 ## Setup Kubernetes environment:
