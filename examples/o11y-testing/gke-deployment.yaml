@@ -39,7 +39,7 @@ data:
       "enable_cloud_monitoring": true,
       "enable_cloud_trace": true,
       "enable_cloud_logging": true,
-      "destination_project_id": "grpc-testing",
+      "destination_project_id": "${PROJECT}",
       "log_filters": [{
         "pattern": "*",
         "header_bytes": 4096,
@@ -62,7 +62,7 @@ data:
       "enable_cloud_monitoring": true,
       "enable_cloud_trace": true,
       "enable_cloud_logging": true,
-      "destination_project_id": "grpc-testing",
+      "destination_project_id": "${PROJECT}",
       "log_filters": [{
         "pattern": "*",
         "header_bytes": 4096,
@@ -110,7 +110,7 @@ spec:
         k8s-app: grpc-server-app-ui
     spec:
       containers:
-      - image: gcr.io/grpc-testing/vindhyan_o11y_examples:1.50.0-SNAPSHOT_0823
+      - image: gcr.io/${PROJECT}/o11y-examples:1.50.0-SNAPSHOT_0823
         imagePullPolicy: Always
         name: &container1 grpc-server-container-ui
         env:
@@ -154,7 +154,7 @@ spec:
         k8s-app: grpc-client-app-ui
     spec:
       containers:
-      - image: gcr.io/grpc-testing/vindhyan_o11y_examples:1.50.0-SNAPSHOT_0823
+      - image: gcr.io/${PROJECT}/o11y-examples:1.50.0-SNAPSHOT_0823
         imagePullPolicy: Always
         name: &container2 grpc-client-container-ui
         env:
