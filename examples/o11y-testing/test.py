@@ -5,7 +5,7 @@ from google.cloud import monitoring_v3
 import time
 
 client = monitoring_v3.MetricServiceClient()
-project = 'stanleycheung-gke2-dev'
+project = 'microsvcs-testing'
 project_name = f"projects/{project}"
 
 series = monitoring_v3.TimeSeries()

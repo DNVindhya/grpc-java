@@ -14,7 +14,7 @@ nanos = int((now - seconds) * 10**9)
 start_time = datetime.now(timezone.utc) - timedelta(minutes=5) # last 5 minutes
 start_seconds = int(start_time.timestamp())
 
-project = 'stanleycheung-gke2-dev'
+project = 'microsvcs-testing'
 project_name = f"projects/{project}"
 
 
