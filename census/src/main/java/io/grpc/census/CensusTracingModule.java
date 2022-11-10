@@ -19,6 +19,7 @@ package io.grpc.census;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import io.grpc.Attributes;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -32,6 +33,7 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerStreamTracer;
 import io.grpc.StreamTracer;
+import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.BlankSpan;
 import io.opencensus.trace.EndSpanOptions;
@@ -224,6 +226,24 @@ final class CensusTracingModule {
     span.addMessageEvent(eventBuilder.build());
   }
 
+  private static void recordAnnotation(
+      Span span, long optionalWireSize, long optionalUncompressedSize) {
+    Annotation annotation =
+        // Annotation.fromDescriptionAndAttributes(
+        //     "Compressed and Uncompressed Bytes",
+        //     ImmutableMap.of(
+        //         "compressedSize",
+        //         AttributeValue.longAttributeValue(optionalWireSize),
+        //         "uncompressedSize",
+        //         AttributeValue.longAttributeValue(optionalUncompressedSize)));
+        Annotation.fromDescriptionAndAttributes(
+            "Compressed and Uncompressed Bytes",
+            ImmutableMap.of(
+                "compressedSize",
+                AttributeValue.longAttributeValue(optionalWireSize)));
+    span.addAnnotation(annotation);
+  }
+
   @VisibleForTesting
   final class CallAttemptsTracerFactory extends ClientStreamTracer.Factory {
     volatile int callEnded;
@@ -314,6 +334,7 @@ final class CensusTracingModule {
         int seqNo, long optionalWireSize, long optionalUncompressedSize) {
       recordMessageEvent(
           span, MessageEvent.Type.RECEIVED, seqNo, optionalWireSize, optionalUncompressedSize);
+      recordAnnotation(span, optionalWireSize, optionalUncompressedSize);
     }
 
     @Override
@@ -391,6 +412,7 @@ final class CensusTracingModule {
         int seqNo, long optionalWireSize, long optionalUncompressedSize) {
       recordMessageEvent(
           span, MessageEvent.Type.RECEIVED, seqNo, optionalWireSize, optionalUncompressedSize);
+      recordAnnotation(span, optionalWireSize, optionalUncompressedSize);
     }
   }
 
