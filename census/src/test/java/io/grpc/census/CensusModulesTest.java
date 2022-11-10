@@ -225,7 +225,7 @@ public class CensusModulesTest {
         new CensusStatsModule(
             tagger, tagCtxSerializer, statsRecorder, fakeClock.getStopwatchSupplier(),
             true, true, true, false /* real-time */, true);
-    censusTracing = new CensusTracingModule(tracer, mockTracingPropagationHandler, true);
+    censusTracing = new CensusTracingModule(tracer, mockTracingPropagationHandler);
   }
 
   @After
@@ -1507,7 +1507,7 @@ public class CensusModulesTest {
         });
   }
 
-  static class CallInfo<ReqT, RespT> extends ServerCallInfo<ReqT, RespT> {
+  private static class CallInfo<ReqT, RespT> extends ServerCallInfo<ReqT, RespT> {
     private final MethodDescriptor<ReqT, RespT> methodDescriptor;
     private final Attributes attributes;
     private final String authority;
