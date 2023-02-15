@@ -32,6 +32,10 @@ import com.google.protobuf.util.JsonFormat;
 import io.grpc.Internal;
 import io.grpc.internal.JsonParser;
 import io.grpc.observabilitylog.v1.GrpcLogRecord;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanContext;
+import io.opencensus.trace.TraceId;
+import io.opencensus.trace.unsafe.ContextHandleUtils;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collection;
@@ -117,6 +121,7 @@ public class GcpLogSink implements Sink {
       if (!customTags.isEmpty()) {
         grpcLogEntryBuilder.setLabels(customTags);
       }
+      enhanceLogEntryWithTrace(grpcLogEntryBuilder);
       LogEntry grpcLogEntry = grpcLogEntryBuilder.build();
       synchronized (this) {
         logger.log(Level.FINEST, "Writing gRPC event : {0} to Cloud Logging", eventType);
@@ -171,6 +176,27 @@ public class GcpLogSink implements Sink {
     JsonFormat.Printer printer = JsonFormat.printer();
     String recordJson = printer.print(logProto);
     return (Map<String, Object>) JsonParser.parse(recordJson);
+  }
+
+  private void enhanceLogEntryWithTrace(LogEntry.Builder builder) {
+    String tracePrefix = "projects/" + (this.projectId == null ? "" : this.projectId) + "/traces/";
+    addTracingData(tracePrefix, getCurrentSpanContext(), builder);
+  }
+
+  private SpanContext getCurrentSpanContext() {
+    Span span = ContextHandleUtils.getValue(ContextHandleUtils.currentContext());
+    return span == null ? SpanContext.INVALID : span.getContext();
+  }
+
+  private static void addTracingData(
+      String tracePrefix, SpanContext span, LogEntry.Builder builder) {
+    builder.setTrace(formatTraceId(tracePrefix, span.getTraceId()));
+    builder.setSpanId(span.getSpanId().toLowerBase16());
+    builder.setTraceSampled(span.getTraceOptions().isSampled());
+  }
+
+  private static String formatTraceId(String tracePrefix, TraceId traceId) {
+    return tracePrefix + traceId.toLowerBase16();
   }
 
   /**
