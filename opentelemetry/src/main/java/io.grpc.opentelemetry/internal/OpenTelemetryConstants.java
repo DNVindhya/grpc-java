@@ -18,15 +18,13 @@ package io.grpc.opentelemetry.internal;
 
 public final class OpenTelemetryConstants {
 
-  public static final String INSTRUMENTATION_SCOPE = "grpc";
+  public static final String INSTRUMENTATION_SCOPE = "grpc-java";
 
   public static final String METHOD_KEY = "grpc.method";
 
   public static final String STATUS_KEY = "grpc.status";
 
   public static final String TARGET_KEY = "grpc.target";
-
-  public static final String AUTHORITY_KEY = "grpc.authority";
 
   public static final String CLIENT_ATTEMPT_COUNT_INSTRUMENT_NAME = "grpc.client.attempt.started";
 

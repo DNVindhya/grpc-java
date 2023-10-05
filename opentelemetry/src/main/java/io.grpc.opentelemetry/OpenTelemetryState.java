@@ -36,7 +36,7 @@ class OpenTelemetryState {
   LongHistogram serverTotalSentCompressedMessageSize;
   LongHistogram serverTotalReceivedCompressedMessageSize;
 
-  private OpenTelemetryState(OpenTelemetryStateBuilder builder) {
+  private OpenTelemetryState(Builder builder) {
     this(builder.clientCallDurationCounter,
         builder.clientAttemptCountCounter,
         builder.clientAttemptDurationCounter,
@@ -63,7 +63,7 @@ class OpenTelemetryState {
     this.serverTotalReceivedCompressedMessageSize = i;
   }
 
-  public static class OpenTelemetryStateBuilder {
+  public static class Builder {
 
     private DoubleHistogram clientCallDurationCounter;
     private LongCounter clientAttemptCountCounter;
@@ -77,61 +77,55 @@ class OpenTelemetryState {
     private LongHistogram serverTotalSentCompressedMessageSizeCounter;
     private LongHistogram serverTotalReceivedCompressedMessageSizeCounter;
 
-    OpenTelemetryStateBuilder clientCallDurationCounter(DoubleHistogram counter) {
+    Builder clientCallDurationCounter(DoubleHistogram counter) {
       this.clientCallDurationCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder clientAttemptCountCounter(LongCounter counter) {
+    Builder clientAttemptCountCounter(LongCounter counter) {
       this.clientAttemptCountCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder clientAttemptDurationCounter(DoubleHistogram counter) {
+    Builder clientAttemptDurationCounter(DoubleHistogram counter) {
       this.clientAttemptDurationCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder clientTotalSentCompressedMessageSizeCounter(LongHistogram counter) {
+    Builder clientTotalSentCompressedMessageSizeCounter(LongHistogram counter) {
       this.clientTotalSentCompressedMessageSizeCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder clientTotalReceivedCompressedMessageSizeCounter(
+    Builder clientTotalReceivedCompressedMessageSizeCounter(
         LongHistogram counter) {
       this.clientTotalReceivedCompressedMessageSizeCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder serverCallCountCounter(LongCounter counter) {
+    Builder serverCallCountCounter(LongCounter counter) {
       this.serverCallCountCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder serverCallDurationCounter(DoubleHistogram counter) {
+    Builder serverCallDurationCounter(DoubleHistogram counter) {
       this.serverCallDurationCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder serverTotalSentCompressedMessageSizeCounter(LongHistogram counter) {
+    Builder serverTotalSentCompressedMessageSizeCounter(LongHistogram counter) {
       this.serverTotalSentCompressedMessageSizeCounter = counter;
       return this;
     }
 
-    OpenTelemetryStateBuilder serverTotalReceivedCompressedMessageSizeCounter(
+    Builder serverTotalReceivedCompressedMessageSizeCounter(
         LongHistogram counter) {
       this.serverTotalReceivedCompressedMessageSizeCounter = counter;
       return this;
     }
 
     OpenTelemetryState build() {
-      validateMetricCounters();
       return new OpenTelemetryState(this);
-    }
-
-    private void validateMetricCounters() {
-      // Initialize no op counters for not enabled metrics
-      // This will remove null checks for every rpc - can't do it, as we do not know
     }
 
   }
